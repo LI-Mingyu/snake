@@ -139,7 +139,7 @@ class Food:
         self.spawn()
     
     def spawn(self):
-        self.is_special = random.random() < 0.2
+        self.is_special = random.random() < 0.4
         while True:
             self.position = (random.randrange(0, WIDTH, CELL_SIZE), 
                             random.randrange(0, HEIGHT, CELL_SIZE))
@@ -238,7 +238,7 @@ def game_loop():
         
         # 游戏结束显示
         if game_over:
-            text1 = font.render("新年快乐！", True, (255,255,0))
+            text1 = font.render("蛇年快乐！", True, (255,255,0))
             text2 = font.render("按空格键辞旧迎新", True, (255,255,0))
             screen.blit(text1, (WIDTH//2-80, HEIGHT//2-30))
             screen.blit(text2, (WIDTH//2-140, HEIGHT//2+10))
