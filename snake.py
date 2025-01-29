@@ -29,6 +29,42 @@ pygame.display.set_caption("新春贪吃蛇")
 # 游戏时钟
 clock = pygame.time.Clock()
 
+# 解决中文乱码问题（macOS适配）
+try:
+    # 尝试加载 macOS 系统字体
+    font = pygame.font.Font("/System/Library/Fonts/STHeiti Medium.ttc", 30)
+except:
+    try:
+        # 尝试加载 Windows 字体
+        font = pygame.font.SysFont("simhei", 30)
+    except:
+        # 最终回退方案
+        font = pygame.font.Font(None, 30)
+
+# 生成简单音效（避免依赖外部文件）
+def generate_beep_sound(freq=440, duration=0.1):
+    sample_rate = 44100
+    n_samples = int(sample_rate * duration)
+    buf = pygame.sndarray.make_sound(
+        pygame.sndarray.array(
+            pygame.mixer.Sound(
+                buffer=bytes([int(127 * math.sin(2 * math.pi * freq * t / sample_rate) + 127)
+                for t in range(n_samples)])
+            )
+        )
+    )
+    return buf
+
+# 初始化音效
+try:
+    # 尝试加载真实音效（需要用户自行添加文件）
+    firework_sound = pygame.mixer.Sound("firework.wav")
+    drum_sound = pygame.mixer.Sound("drum.wav")
+except:
+    # 生成替代音效
+    firework_sound = generate_beep_sound(880, 0.3)
+    drum_sound = generate_beep_sound(220, 0.2)
+
 # 方向控制
 class Direction:
     UP = (0, -1)
@@ -66,6 +102,7 @@ class Snake:
     def move(self):
         if self.grow and random.random() < 0.3:
             self.fireworks.extend(SpringEffects.create_firework(self.body[0]))
+            drum_sound.play()
             
         head_x, head_y = self.body[0]
         dx, dy = self.direction
@@ -117,6 +154,8 @@ class Food:
             if self.position not in snake.body:
                 break
         self.special_timer = time.time()
+        if self.is_special:
+            drum_sound.play()
     
     def draw(self):
         color = SPRING_FESTIVAL["colors"]["special_food"] if self.is_special \
@@ -173,6 +212,7 @@ def game_loop():
                 score += 5 if food.is_special else 1
                 if food.is_special:
                     snake.fireworks.extend(SpringEffects.create_firework(food.position))
+                    firework_sound.play()
                 food.spawn()
             
             # 特殊食物超时
@@ -182,6 +222,7 @@ def game_loop():
             # 碰撞检测
             if snake.check_collision():
                 game_over = True
+                firework_sound.play()
 
         # 绘制界面
         screen.fill(SPRING_FESTIVAL["colors"]["bg"])
@@ -196,7 +237,6 @@ def game_loop():
         food.draw()
         
         # 显示分数
-        font = pygame.font.SysFont("simhei", 30)
         text = font.render(f"福气: {score}", True, (255,255,0))
         screen.blit(text, (10, 10))
         
