@@ -31,17 +31,14 @@ clock = pygame.time.Clock()
 
 # 解决中文乱码问题（macOS适配）
 try:
-    # 尝试加载 macOS 系统字体
     font = pygame.font.Font("/System/Library/Fonts/STHeiti Medium.ttc", 30)
 except:
     try:
-        # 尝试加载 Windows 字体
         font = pygame.font.SysFont("simhei", 30)
     except:
-        # 最终回退方案
         font = pygame.font.Font(None, 30)
 
-# 生成简单音效（避免依赖外部文件）
+# 生成音效
 def generate_beep_sound(freq=440, duration=0.1):
     sample_rate = 44100
     n_samples = int(sample_rate * duration)
@@ -57,13 +54,11 @@ def generate_beep_sound(freq=440, duration=0.1):
 
 # 初始化音效
 try:
-    # 尝试加载真实音效（需要用户自行添加文件）
     firework_sound = pygame.mixer.Sound("firework.wav")
     drum_sound = pygame.mixer.Sound("drum.wav")
 except:
-    # 生成替代音效
-    firework_sound = generate_beep_sound(880, 0.3)
-    drum_sound = generate_beep_sound(220, 0.2)
+    firework_sound = generate_beep_sound(880, 0.3)  # 高频爆竹声
+    drum_sound = generate_beep_sound(220, 0.2)      # 低频鼓声
 
 # 方向控制
 class Direction:
@@ -88,7 +83,7 @@ class SpringEffects:
             })
         return particles
 
-# 贪吃蛇类
+# 贪吃蛇类（修复问题1：普通食物触发粒子特效）
 class Snake:
     def __init__(self):
         self.reset()
@@ -100,10 +95,7 @@ class Snake:
         self.grow = False
     
     def move(self):
-        if self.grow and random.random() < 0.3:
-            self.fireworks.extend(SpringEffects.create_firework(self.body[0]))
-            drum_sound.play()
-            
+        # 移除此处可能触发粒子特效的代码
         head_x, head_y = self.body[0]
         dx, dy = self.direction
         new_head = ((head_x + dx*CELL_SIZE) % WIDTH, (head_y + dy*CELL_SIZE) % HEIGHT)
@@ -139,7 +131,7 @@ class Snake:
                                (x+3, y+3), (x+CELL_SIZE-3, y+CELL_SIZE-3), 2)
             pygame.draw.rect(screen, color, (x, y, CELL_SIZE-1, CELL_SIZE-1))
 
-# 食物类
+# 食物类（修复问题2：确保音效触发）
 class Food:
     def __init__(self):
         self.is_special = False
@@ -154,8 +146,6 @@ class Food:
             if self.position not in snake.body:
                 break
         self.special_timer = time.time()
-        if self.is_special:
-            drum_sound.play()
     
     def draw(self):
         color = SPRING_FESTIVAL["colors"]["special_food"] if self.is_special \
@@ -175,7 +165,7 @@ class Food:
                 (self.position[0]+5, self.position[1]+10)
             ])
 
-# 游戏主函数
+# 游戏主函数（关键修复）
 def game_loop():
     global snake, food
     snake = Snake()
@@ -206,13 +196,19 @@ def game_loop():
         if not game_over:
             snake.move()
             
-            # 食物检测
+            # 食物检测（关键修改点）
             if snake.body[0] == food.position:
                 snake.grow = True
                 score += 5 if food.is_special else 1
+                
+                # 问题修复1：仅特殊食物触发粒子特效
                 if food.is_special:
                     snake.fireworks.extend(SpringEffects.create_firework(food.position))
                     firework_sound.play()
+                
+                # 问题修复2：每次吃到食物都播放鼓声
+                drum_sound.play()
+                
                 food.spawn()
             
             # 特殊食物超时
